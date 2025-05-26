@@ -1,5 +1,5 @@
 /**
- * FicheProduction v2.0 - Module Colis (Version Corrigée)
+ * FicheProduction v2.0 - Module Colis (Version Corrigée - Boutons Fonctionnels)
  * Gestion complète des colis avec enregistrement amélioré
  */
 
@@ -296,7 +296,7 @@
         }
 
         const currentMultiple = coliData.multiple || 1;
-        const message = `Combien de fois créer ce colis identique ?\\n\\nActuellement: ${currentMultiple} colis`;
+        const message = `Combien de fois créer ce colis identique ?\n\nActuellement: ${currentMultiple} colis`;
         const newMultiple = await FicheProduction.ui.showPrompt(message, currentMultiple.toString());
         
         if (newMultiple !== null && !isNaN(newMultiple) && parseInt(newMultiple) > 0) {
@@ -538,7 +538,7 @@
                     if (editBtn) {
                         editBtn.addEventListener('click', async (e) => {
                             e.stopPropagation();
-                            const stockInfo = product.isLibre ? '' : `\\n(Stock disponible: ${product.total - product.used})`;
+                            const stockInfo = product.isLibre ? '' : `\n(Stock disponible: ${product.total - product.used})`;
                             const newQuantity = await FicheProduction.ui.showPrompt(
                                 `Nouvelle quantité pour ${product.name} :${stockInfo}`,
                                 productInColis.quantity.toString()
@@ -578,7 +578,7 @@
     }
 
     /**
-     * Rendre les détails du colis sélectionné
+     * Rendre les détails du colis sélectionné (VERSION CORRIGÉE)
      */
     function renderColisDetail() {
         const container = document.getElementById('colisDetail');
@@ -641,7 +641,7 @@
             </div>
         `;
 
-        // Ajouter les vignettes dans la zone de contenu
+        // CORRECTION : Ajouter les vignettes avec event listeners immédiats
         const colisContent = document.getElementById('colisContent');
         const products = FicheProduction.data.products();
         
@@ -652,22 +652,52 @@
 
                 const vignette = FicheProduction.inventory.createProductVignette(product, true, p.quantity);
                 
-                // Ajouter bouton supprimer
+                // CORRECTION : Bouton supprimer avec event listener immédiat
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'btn-remove-line';
-                removeBtn.textContent = '✕';
+                removeBtn.textContent = '×';
                 removeBtn.dataset.productId = p.productId;
-                removeBtn.style.position = 'absolute';
-                removeBtn.style.top = '5px';
-                removeBtn.style.left = '5px';
+                removeBtn.style.cssText = `
+                    position: absolute; top: 5px; left: 5px; background: #dc3545; color: white;
+                    border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
+                    font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
+                `;
+                
+                // CORRECTION : Event listener attaché immédiatement
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const productId = parseInt(e.target.dataset.productId);
+                    debugLog(`🗑️ Suppression produit ${productId} du colis ${selectedColis.id}`);
+                    removeProductFromColis(selectedColis.id, productId);
+                });
+                
                 vignette.style.position = 'relative';
                 vignette.appendChild(removeBtn);
+
+                // CORRECTION : Event listener pour l'input de quantité attaché immédiatement
+                const quantityInput = vignette.querySelector('.quantity-input');
+                if (quantityInput) {
+                    quantityInput.addEventListener('change', (e) => {
+                        const productId = parseInt(e.target.dataset.productId);
+                        const newQuantity = parseInt(e.target.value);
+                        debugLog(`📝 Modification quantité produit ${productId} vers ${newQuantity}`);
+                        updateProductQuantity(selectedColis.id, productId, newQuantity);
+                    });
+                    
+                    // Ajouter aussi un listener pour la touche Entrée
+                    quantityInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.target.blur(); // Déclenche l'événement change
+                        }
+                    });
+                }
 
                 colisContent.appendChild(vignette);
             });
         }
 
-        // Event listeners pour les boutons et inputs
+        // Event listeners pour les contrôles généraux du colis
         const deleteBtn = document.getElementById('deleteColisBtn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', async (e) => {
@@ -684,28 +714,15 @@
             });
         }
 
-        const removeLineBtns = container.querySelectorAll('.btn-remove-line');
-        removeLineBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = parseInt(e.target.dataset.productId);
-                removeProductFromColis(selectedColis.id, productId);
-            });
-        });
-
-        const quantityInputs = container.querySelectorAll('.quantity-input');
-        quantityInputs.forEach(input => {
-            input.addEventListener('change', async (e) => {
-                const productId = parseInt(e.target.dataset.productId);
-                updateProductQuantity(selectedColis.id, productId, e.target.value);
-            });
-        });
+        // CORRECTION : Les event listeners pour les boutons sont maintenant attachés directement
+        // lors de la création de chaque vignette, pas après coup
 
         // Setup drop zone pour le contenu du colis (seulement pour colis normaux)
         if (colisContent && !selectedColis.isLibre && FicheProduction.dragdrop.setupDropZone) {
             FicheProduction.dragdrop.setupDropZone(colisContent, selectedColis.id);
         }
+        
+        debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Event listeners attachés`);
     }
 
     /**
@@ -795,6 +812,6 @@
     window.renderColisOverview = renderColisOverview;
     window.renderColisDetail = renderColisDetail;
 
-    debugLog('📦 Module Colis chargé et intégré (Version corrigée)');
+    debugLog('📦 Module Colis chargé et intégré (Version corrigée - Boutons fonctionnels)');
 
 })();
