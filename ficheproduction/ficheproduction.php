@@ -740,8 +740,17 @@ print '</div>';
     </div>
 </div>
 
-<!-- Inclusion du JavaScript corrigé -->
-<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction.js', 1); ?>"></script>
+<!-- Architecture modulaire corrigée - PLUS DE MONOLITHE -->
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-core.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-ui.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-utils.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-vignettes.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-ajax.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-inventory.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-colis.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-dragdrop.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-libre.js', 1); ?>"></script>
+<script src="<?php echo dol_buildpath('/ficheproduction/js/ficheproduction-main.js', 1); ?>"></script>
 
 <script>
 // Initialisation une fois que le DOM est chargé
@@ -750,11 +759,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const ORDER_ID = <?php echo $object->id; ?>;
     const TOKEN = '<?php echo newToken(); ?>';
     
-    // Initialiser l'application
+    // Initialiser l'application avec l'architecture modulaire
     if (typeof initializeFicheProduction === 'function') {
         initializeFicheProduction(ORDER_ID, TOKEN);
     } else {
-        console.error('Fonction initializeFicheProduction non trouvée - Vérifiez que ficheproduction.js est bien chargé');
+        console.error('❌ Fonction initializeFicheProduction non trouvée - Vérifiez le chargement des modules');
+        // Afficher un message d'erreur visible
+        document.body.insertAdjacentHTML('afterbegin', 
+            '<div style="background: #ff4444; color: white; padding: 10px; text-align: center; font-weight: bold;">' +
+            '❌ ERREUR: Architecture modulaire non chargée - Vérifiez les fichiers JS' +
+            '</div>'
+        );
     }
 });
 </script>
