@@ -1,5 +1,5 @@
 /**
- * FicheProduction v2.0 - Module Inventory (Version Corrigée)
+ * FicheProduction v2.0 - Module Inventory (Version Corrigée - Inputs Fonctionnels)
  * Gestion de l'inventaire des produits avec enregistrement amélioré
  */
 
@@ -12,7 +12,11 @@
     // ============================================================================
 
     /**
-     * Créer une vignette produit (utilisée dans inventaire et colis)
+     * Créer une vignette produit (VERSION CORRIGÉE - Inputs Fonctionnels)
+     * @param {Object} product - Données du produit
+     * @param {boolean} isInColis - Si le produit est affiché dans un colis
+     * @param {number} currentQuantity - Quantité actuelle pour les produits dans les colis
+     * @returns {HTMLElement} - Élément DOM de la vignette
      */
     function createProductVignette(product, isInColis = false, currentQuantity = 1) {
         // Gestion des produits libres (pas de contraintes de stock)
@@ -24,10 +28,11 @@
             }
 
             const quantityInputHtml = isInColis ? `
-                <div class="quantity-input-container">
-                    <span class="quantity-input-label">Qté:</span>
+                <div class="quantity-input-container" style="margin-top: 8px; display: flex; align-items: center; gap: 5px;">
+                    <span class="quantity-input-label" style="font-size: 12px; font-weight: bold;">Qté:</span>
                     <input type="number" class="quantity-input" value="${currentQuantity}" min="1" 
-                           data-product-id="${product.id}">
+                           data-product-id="${product.id}" 
+                           style="width: 60px; padding: 4px; border: 1px solid #ced4da; border-radius: 4px; text-align: center;">
                 </div>
             ` : '';
 
@@ -68,12 +73,13 @@
             vignetteElement.dataset.productId = product.id;
         }
 
-        // Ajouter input de quantité pour les vignettes dans les colis
+        // CORRECTION : Ajouter input de quantité avec les bons styles pour les vignettes dans les colis
         const quantityInputHtml = isInColis ? `
-            <div class="quantity-input-container">
-                <span class="quantity-input-label">Qté:</span>
+            <div class="quantity-input-container" style="margin-top: 8px; display: flex; align-items: center; gap: 5px;">
+                <span class="quantity-input-label" style="font-size: 12px; font-weight: bold;">Qté:</span>
                 <input type="number" class="quantity-input" value="${currentQuantity}" min="1" 
-                       data-product-id="${product.id}">
+                       data-product-id="${product.id}" 
+                       style="width: 60px; padding: 4px; border: 1px solid #ced4da; border-radius: 4px; text-align: center;">
             </div>
         ` : '';
 
@@ -321,7 +327,7 @@
     // ============================================================================
 
     const InventoryModule = {
-        createProductVignette: createProductVignette,
+        createProductVignette: createProductVignette, // FONCTION CRITIQUE CORRIGÉE
         createLibreProduct: createLibreProduct,
         updateInventoryFromSavedData: updateInventoryFromSavedData,
         populateProductGroupSelector: populateProductGroupSelector,
@@ -346,6 +352,7 @@
             setTimeout(() => {
                 if (window.FicheProduction.inventory && window.FicheProduction.inventory.renderInventory) {
                     debugLog('✅ renderInventory disponible dans le namespace');
+                    debugLog('✅ createProductVignette corrigé avec inputs fonctionnels');
                 } else {
                     debugLog('❌ renderInventory toujours non disponible dans le namespace');
                     // Enregistrement forcé si nécessaire
@@ -375,6 +382,6 @@
     window.sortProducts = sortProducts;
     window.renderInventory = renderInventory;
 
-    debugLog('📦 Module Inventory chargé et intégré (Version corrigée)');
+    debugLog('📦 Module Inventory chargé et intégré (Version corrigée - Inputs fonctionnels)');
 
 })();
