@@ -583,6 +583,9 @@
 /**
  * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Event Listeners Fonctionnels)
  */
+/**
+ * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Délégation d'événements)
+ */
 function renderColisDetail() {
     const container = document.getElementById('colisDetail');
     if (!container) {
@@ -644,7 +647,7 @@ function renderColisDetail() {
         </div>
     `;
 
-    // ✅ CORRECTION : Ajouter les vignettes avec event listeners IMMÉDIATS
+    // ✅ SOLUTION : Ajouter les vignettes SANS event listeners individuels
     const colisContent = document.getElementById('colisContent');
     const products = FicheProduction.data.products();
     
@@ -655,52 +658,32 @@ function renderColisDetail() {
 
             const vignette = FicheProduction.inventory.createProductVignette(product, true, p.quantity);
             
-            // ✅ CORRECTION : Bouton supprimer avec event listener IMMÉDIAT
+            // ✅ SOLUTION : Bouton supprimer SANS event listener individuel
             const removeBtn = document.createElement('button');
             removeBtn.className = 'btn-remove-line';
             removeBtn.textContent = '×';
             removeBtn.dataset.productId = p.productId;
+            removeBtn.dataset.colisId = selectedColis.id;
             removeBtn.style.cssText = `
                 position: absolute; top: 5px; left: 5px; background: #dc3545; color: white;
                 border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
                 font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
             `;
             
-            // ✅ CORRECTION : Event listener attaché IMMÉDIATEMENT
-            removeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = parseInt(e.target.dataset.productId);
-                debugLog(`🗑️ Suppression produit ${productId} du colis ${selectedColis.id}`);
-                removeProductFromColis(selectedColis.id, productId);
-            });
-            
             vignette.style.position = 'relative';
             vignette.appendChild(removeBtn);
 
-            // ✅ CORRECTION : Event listener pour l'input de quantité attaché IMMÉDIATEMENT
+            // ✅ SOLUTION : Input de quantité SANS event listener individuel
             const quantityInput = vignette.querySelector('.quantity-input');
             if (quantityInput) {
-                quantityInput.addEventListener('change', (e) => {
-                    const productId = parseInt(e.target.dataset.productId);
-                    const newQuantity = parseInt(e.target.value);
-                    debugLog(`📝 Modification quantité produit ${productId} vers ${newQuantity}`);
-                    updateProductQuantity(selectedColis.id, productId, newQuantity);
-                });
-                
-                // ✅ BONUS : Ajouter aussi un listener pour la touche Entrée
-                quantityInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.target.blur(); // Déclenche l'événement change
-                    }
-                });
+                quantityInput.dataset.colisId = selectedColis.id; // Ajouter l'ID du colis
             }
 
             colisContent.appendChild(vignette);
         });
     }
 
-    // Event listeners pour les contrôles généraux du colis
+    // Event listeners pour les contrôles généraux du colis (ces éléments ne changent pas)
     const deleteBtn = document.getElementById('deleteColisBtn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
@@ -722,7 +705,65 @@ function renderColisDetail() {
         FicheProduction.dragdrop.setupDropZone(colisContent, selectedColis.id);
     }
     
-    debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Event listeners attachés`);
+    debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Délégation d'événements active`);
+}
+
+// ✅ SOLUTION : Initialiser la délégation d'événements UNE SEULE FOIS
+function initializeColisDetailEventDelegation() {
+    const container = document.getElementById('colisDetail');
+    if (!container) return;
+    
+    // Supprimer les anciens listeners pour éviter les doublons
+    container.removeEventListener('click', handleColisDetailClick);
+    container.removeEventListener('change', handleColisDetailChange);
+    container.removeEventListener('keydown', handleColisDetailKeydown);
+    
+    // ✅ DÉLÉGATION : Gérer tous les clics sur les boutons de suppression
+    container.addEventListener('click', handleColisDetailClick);
+    
+    // ✅ DÉLÉGATION : Gérer tous les changements d'inputs de quantité
+    container.addEventListener('change', handleColisDetailChange);
+    
+    // ✅ DÉLÉGATION : Gérer la touche Entrée sur les inputs
+    container.addEventListener('keydown', handleColisDetailKeydown);
+    
+    debugLog('✅ Délégation d\'événements initialisée pour colisDetail');
+}
+
+// ✅ SOLUTION : Gestionnaire de clics délégué
+function handleColisDetailClick(e) {
+    // Bouton supprimer produit
+    if (e.target.classList.contains('btn-remove-line')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const productId = parseInt(e.target.dataset.productId);
+        const colisId = parseInt(e.target.dataset.colisId);
+        
+        debugLog(`🗑️ Suppression produit ${productId} du colis ${colisId}`);
+        removeProductFromColis(colisId, productId);
+    }
+}
+
+// ✅ SOLUTION : Gestionnaire de changements délégué
+function handleColisDetailChange(e) {
+    // Input de quantité
+    if (e.target.classList.contains('quantity-input')) {
+        const productId = parseInt(e.target.dataset.productId);
+        const colisId = parseInt(e.target.dataset.colisId);
+        const newQuantity = parseInt(e.target.value);
+        
+        debugLog(`📝 Modification quantité produit ${productId} vers ${newQuantity} dans colis ${colisId}`);
+        updateProductQuantity(colisId, productId, newQuantity);
+    }
+}
+
+// ✅ SOLUTION : Gestionnaire de touches délégué
+function handleColisDetailKeydown(e) {
+    // Touche Entrée sur input de quantité
+    if (e.key === 'Enter' && e.target.classList.contains('quantity-input')) {
+        e.target.blur(); // Déclenche l'événement change
+    }
 }
 
     /**
@@ -813,5 +854,21 @@ function renderColisDetail() {
     window.renderColisDetail = renderColisDetail;
 
     debugLog('📦 Module Colis chargé et intégré (Version corrigée - Boutons fonctionnels)');
-
+    function initializeColisModule() {
+    debugLog('📦 Initialisation du module Colis');
+    
+    // Bouton Nouveau Colis
+    const addNewColisBtn = document.getElementById('addNewColisBtn');
+    if (addNewColisBtn) {
+        addNewColisBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            addNewColis();
+        });
+    }
+    
+    // ✅ NOUVEAU : Initialiser la délégation d'événements
+    initializeColisDetailEventDelegation();
+    
+    debugLog('✅ Module Colis initialisé');
+}
 })();
