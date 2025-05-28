@@ -578,152 +578,149 @@
     }
 
     /**
-     * Rendre les détails du colis sélectionné (VERSION CORRIGÉE)
-     */
-    function renderColisDetail() {
-        const container = document.getElementById('colisDetail');
-        if (!container) {
-            debugLog('❌ Élément colisDetail non trouvé');
-            return;
-        }
-        
-        const selectedColis = FicheProduction.data.selectedColis();
-        
-        if (!selectedColis) {
-            container.innerHTML = '<div class="empty-state">Sélectionnez un colis pour voir les détails</div>';
-            return;
-        }
+ * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Event Listeners Fonctionnels)
+ */
+function renderColisDetail() {
+    const container = document.getElementById('colisDetail');
+    if (!container) {
+        debugLog('❌ Élément colisDetail non trouvé');
+        return;
+    }
+    
+    const selectedColis = FicheProduction.data.selectedColis();
+    
+    if (!selectedColis) {
+        container.innerHTML = '<div class="empty-state">Sélectionnez un colis pour voir les détails</div>';
+        return;
+    }
 
-        const weightPercentage = (selectedColis.totalWeight / selectedColis.maxWeight) * 100;
-        let weightStatus = 'ok';
-        if (weightPercentage > 90) weightStatus = 'danger';
-        else if (weightPercentage > 70) weightStatus = 'warning';
+    const weightPercentage = (selectedColis.totalWeight / selectedColis.maxWeight) * 100;
+    let weightStatus = 'ok';
+    if (weightPercentage > 90) weightStatus = 'danger';
+    else if (weightPercentage > 70) weightStatus = 'warning';
 
-        const multipleSection = selectedColis.multiple > 1 ? 
-            `<div class="duplicate-controls">
-                <span>📦 Ce colis sera créé</span>
-                <input type="number" value="${selectedColis.multiple}" min="1" max="100" 
-                       class="duplicate-input" id="multipleInput">
-                <span>fois identique(s)</span>
-                <span style="margin-left: 10px; font-weight: bold;">
-                    Total: ${(selectedColis.totalWeight * selectedColis.multiple).toFixed(1)} kg
-                </span>
-            </div>` : '';
+    const multipleSection = selectedColis.multiple > 1 ? 
+        `<div class="duplicate-controls">
+            <span>📦 Ce colis sera créé</span>
+            <input type="number" value="${selectedColis.multiple}" min="1" max="100" 
+                   class="duplicate-input" id="multipleInput">
+            <span>fois identique(s)</span>
+            <span style="margin-left: 10px; font-weight: bold;">
+                Total: ${(selectedColis.totalWeight * selectedColis.multiple).toFixed(1)} kg
+            </span>
+        </div>` : '';
 
-        const colisTypeText = selectedColis.isLibre ? 'Colis Libre' : `Colis ${selectedColis.number}`;
-        const colisTypeIcon = selectedColis.isLibre ? '📦🆓' : '📦';
+    const colisTypeText = selectedColis.isLibre ? 'Colis Libre' : `Colis ${selectedColis.number}`;
+    const colisTypeIcon = selectedColis.isLibre ? '📦🆓' : '📦';
 
-        container.innerHTML = `
-            <div class="colis-detail-header">
-                <h3 class="colis-detail-title">${colisTypeIcon} ${colisTypeText}</h3>
-                <button class="btn-delete-colis" id="deleteColisBtn">🗑️ Supprimer</button>
-            </div>
+    container.innerHTML = `
+        <div class="colis-detail-header">
+            <h3 class="colis-detail-title">${colisTypeIcon} ${colisTypeText}</h3>
+            <button class="btn-delete-colis" id="deleteColisBtn">🗑️ Supprimer</button>
+        </div>
 
-            ${multipleSection}
+        ${multipleSection}
 
-            <div class="constraints-section">
-                <div class="constraint-item">
-                    <div class="constraint-label">Poids:</div>
-                    <div class="constraint-values">
-                        ${selectedColis.totalWeight.toFixed(1)} / ${selectedColis.maxWeight} kg
-                    </div>
-                    <div class="constraint-bar">
-                        <div class="constraint-progress ${weightStatus}" style="width: ${Math.min(weightPercentage, 100)}%"></div>
-                    </div>
+        <div class="constraints-section">
+            <div class="constraint-item">
+                <div class="constraint-label">Poids:</div>
+                <div class="constraint-values">
+                    ${selectedColis.totalWeight.toFixed(1)} / ${selectedColis.maxWeight} kg
+                </div>
+                <div class="constraint-bar">
+                    <div class="constraint-progress ${weightStatus}" style="width: ${Math.min(weightPercentage, 100)}%"></div>
                 </div>
             </div>
+        </div>
 
-            <div style="margin-bottom: 10px; font-weight: bold;">Produits dans ce colis:</div>
-            <div class="colis-content" id="colisContent" style="border: 2px dashed #ddd; border-radius: 8px; min-height: 150px; padding: 15px; position: relative;">
-                <div class="drop-hint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #999; font-style: italic; pointer-events: none;">
-                    ${selectedColis.products.length === 0 ? (selectedColis.isLibre ? 'Colis libre vide' : 'Glissez un produit ici pour l\'ajouter') : ''}
-                </div>
+        <div style="margin-bottom: 10px; font-weight: bold;">Produits dans ce colis:</div>
+        <div class="colis-content" id="colisContent" style="border: 2px dashed #ddd; border-radius: 8px; min-height: 150px; padding: 15px; position: relative;">
+            <div class="drop-hint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #999; font-style: italic; pointer-events: none;">
+                ${selectedColis.products.length === 0 ? (selectedColis.isLibre ? 'Colis libre vide' : 'Glissez un produit ici pour l\'ajouter') : ''}
             </div>
-        `;
+        </div>
+    `;
 
-        // CORRECTION : Ajouter les vignettes avec event listeners immédiats
-        const colisContent = document.getElementById('colisContent');
-        const products = FicheProduction.data.products();
-        
-        if (selectedColis.products.length > 0) {
-            selectedColis.products.forEach((p, index) => {
-                const product = products.find(prod => prod.id === p.productId);
-                if (!product) return;
+    // ✅ CORRECTION : Ajouter les vignettes avec event listeners IMMÉDIATS
+    const colisContent = document.getElementById('colisContent');
+    const products = FicheProduction.data.products();
+    
+    if (selectedColis.products.length > 0) {
+        selectedColis.products.forEach((p, index) => {
+            const product = products.find(prod => prod.id === p.productId);
+            if (!product) return;
 
-                const vignette = FicheProduction.inventory.createProductVignette(product, true, p.quantity);
-                
-                // CORRECTION : Bouton supprimer avec event listener immédiat
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn-remove-line';
-                removeBtn.textContent = '×';
-                removeBtn.dataset.productId = p.productId;
-                removeBtn.style.cssText = `
-                    position: absolute; top: 5px; left: 5px; background: #dc3545; color: white;
-                    border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
-                    font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
-                `;
-                
-                // CORRECTION : Event listener attaché immédiatement
-                removeBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const productId = parseInt(e.target.dataset.productId);
-                    debugLog(`🗑️ Suppression produit ${productId} du colis ${selectedColis.id}`);
-                    removeProductFromColis(selectedColis.id, productId);
-                });
-                
-                vignette.style.position = 'relative';
-                vignette.appendChild(removeBtn);
-
-                // CORRECTION : Event listener pour l'input de quantité attaché immédiatement
-                const quantityInput = vignette.querySelector('.quantity-input');
-                if (quantityInput) {
-                    quantityInput.addEventListener('change', (e) => {
-                        const productId = parseInt(e.target.dataset.productId);
-                        const newQuantity = parseInt(e.target.value);
-                        debugLog(`📝 Modification quantité produit ${productId} vers ${newQuantity}`);
-                        updateProductQuantity(selectedColis.id, productId, newQuantity);
-                    });
-                    
-                    // Ajouter aussi un listener pour la touche Entrée
-                    quantityInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.target.blur(); // Déclenche l'événement change
-                        }
-                    });
-                }
-
-                colisContent.appendChild(vignette);
-            });
-        }
-
-        // Event listeners pour les contrôles généraux du colis
-        const deleteBtn = document.getElementById('deleteColisBtn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async (e) => {
+            const vignette = FicheProduction.inventory.createProductVignette(product, true, p.quantity);
+            
+            // ✅ CORRECTION : Bouton supprimer avec event listener IMMÉDIAT
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn-remove-line';
+            removeBtn.textContent = '×';
+            removeBtn.dataset.productId = p.productId;
+            removeBtn.style.cssText = `
+                position: absolute; top: 5px; left: 5px; background: #dc3545; color: white;
+                border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
+                font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
+            `;
+            
+            // ✅ CORRECTION : Event listener attaché IMMÉDIATEMENT
+            removeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                await deleteColis(selectedColis.id);
+                const productId = parseInt(e.target.dataset.productId);
+                debugLog(`🗑️ Suppression produit ${productId} du colis ${selectedColis.id}`);
+                removeProductFromColis(selectedColis.id, productId);
             });
-        }
+            
+            vignette.style.position = 'relative';
+            vignette.appendChild(removeBtn);
 
-        const multipleInput = document.getElementById('multipleInput');
-        if (multipleInput) {
-            multipleInput.addEventListener('change', async (e) => {
-                await updateColisMultiple(selectedColis.id, e.target.value);
-            });
-        }
+            // ✅ CORRECTION : Event listener pour l'input de quantité attaché IMMÉDIATEMENT
+            const quantityInput = vignette.querySelector('.quantity-input');
+            if (quantityInput) {
+                quantityInput.addEventListener('change', (e) => {
+                    const productId = parseInt(e.target.dataset.productId);
+                    const newQuantity = parseInt(e.target.value);
+                    debugLog(`📝 Modification quantité produit ${productId} vers ${newQuantity}`);
+                    updateProductQuantity(selectedColis.id, productId, newQuantity);
+                });
+                
+                // ✅ BONUS : Ajouter aussi un listener pour la touche Entrée
+                quantityInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.target.blur(); // Déclenche l'événement change
+                    }
+                });
+            }
 
-        // CORRECTION : Les event listeners pour les boutons sont maintenant attachés directement
-        // lors de la création de chaque vignette, pas après coup
-
-        // Setup drop zone pour le contenu du colis (seulement pour colis normaux)
-        if (colisContent && !selectedColis.isLibre && FicheProduction.dragdrop.setupDropZone) {
-            FicheProduction.dragdrop.setupDropZone(colisContent, selectedColis.id);
-        }
-        
-        debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Event listeners attachés`);
+            colisContent.appendChild(vignette);
+        });
     }
+
+    // Event listeners pour les contrôles généraux du colis
+    const deleteBtn = document.getElementById('deleteColisBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await deleteColis(selectedColis.id);
+        });
+    }
+
+    const multipleInput = document.getElementById('multipleInput');
+    if (multipleInput) {
+        multipleInput.addEventListener('change', async (e) => {
+            await updateColisMultiple(selectedColis.id, e.target.value);
+        });
+    }
+
+    // Setup drop zone pour le contenu du colis (seulement pour colis normaux)
+    if (colisContent && !selectedColis.isLibre && FicheProduction.dragdrop.setupDropZone) {
+        FicheProduction.dragdrop.setupDropZone(colisContent, selectedColis.id);
+    }
+    
+    debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Event listeners attachés`);
+}
 
     /**
      * Initialiser le module colis
