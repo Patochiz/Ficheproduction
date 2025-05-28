@@ -153,21 +153,8 @@
      * NOUVELLE: Configuration des boutons principaux
      */
     function setupMainButtons() {
-        // Bouton Nouveau Colis
-        const addNewColisBtn = document.getElementById('addNewColisBtn');
-        if (addNewColisBtn) {
-            addNewColisBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (FicheProduction.colis && FicheProduction.colis.addNewColis) {
-                    FicheProduction.colis.addNewColis();
-                } else {
-                    console.error('Module Colis non disponible');
-                    if (FicheProduction.ui && FicheProduction.ui.showError) {
-                        FicheProduction.ui.showError('Module Colis non disponible');
-                    }
-                }
-            });
-        }
+        // ✅ PROTECTION : Éviter les doublons d'event listeners
+        
 
         // Bouton Nouveau Colis Libre
         const addNewColisLibreBtn = document.getElementById('addNewColisLibreBtn');

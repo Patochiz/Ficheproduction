@@ -133,56 +133,169 @@
         /**
          * Convertir les données sauvegardées au format JavaScript
          */
-        convertSavedDataToJS(savedColis) {
-            const convertedColis = [];
-            const currentColis = FicheProduction.data.colis();
-            let maxColisId = Math.max(...currentColis.map(c => c.id), 0);
+        /**
+ * Convertir les données sauvegardées au format JavaScript (VERSION CORRIGÉE)
+ */
+convertSavedDataToJS(savedColis) {
+    debugLog('🔄 CONVERSION: Début conversion des données sauvegardées');
+    debugLog(`🔄 CONVERSION: ${savedColis.length} colis à convertir`);
+    
+    const convertedColis = [];
+    const currentColis = FicheProduction.data.colis();
+    const currentProducts = FicheProduction.data.products();
+    let maxColisId = Math.max(...currentColis.map(c => c.id), 0);
 
-            savedColis.forEach(savedColi => {
-                const newColis = {
-                    id: ++maxColisId,
-                    number: savedColi.number,
-                    products: [],
-                    totalWeight: savedColi.totalWeight,
-                    maxWeight: savedColi.maxWeight,
-                    status: savedColi.status,
-                    multiple: savedColi.multiple,
-                    isLibre: savedColi.isLibre || false
-                };
+    savedColis.forEach((savedColi, index) => {
+        debugLog(`🔄 CONVERSION: Traitement colis ${index + 1}/${savedColis.length}`);
+        debugLog(`🔄 CONVERSION: Données colis sauvegardé:`, savedColi);
+        
+        const newColis = {
+            id: ++maxColisId,
+            number: savedColi.number || (index + 1),
+            products: [],
+            totalWeight: parseFloat(savedColi.totalWeight) || 0,
+            maxWeight: parseFloat(savedColi.maxWeight) || 25,
+            status: savedColi.status || 'ok',
+            multiple: parseInt(savedColi.multiple) || 1,
+            isLibre: savedColi.isLibre || false
+        };
 
-                // Convertir les produits
-                savedColi.products.forEach(savedProduct => {
-                    if (savedProduct.isLibre) {
-                        // Créer un produit libre temporaire
-                        const libreProduct = this.createLibreProduct(savedProduct.name, savedProduct.weight);
-                        const products = FicheProduction.data.products();
-                        products.push(libreProduct);
-                        FicheProduction.data.setProducts(products);
-                        
-                        newColis.products.push({
-                            productId: libreProduct.id,
-                            quantity: savedProduct.quantity,
-                            weight: savedProduct.quantity * savedProduct.weight
-                        });
-                    } else {
-                        // Produit standard - trouver dans l'inventaire existant
-                        const product = FicheProduction.data.products().find(p => !p.isLibre && this.matchSavedProduct(p, savedProduct));
+        debugLog(`✅ CONVERSION: Colis créé - ID=${newColis.id}, number=${newColis.number}, isLibre=${newColis.isLibre}`);
+
+        // ✅ CORRECTION CRITIQUE : Convertir les produits avec debugging détaillé
+        if (savedColi.products && Array.isArray(savedColi.products)) {
+            debugLog(`🔄 CONVERSION: ${savedColi.products.length} produits à traiter dans le colis`);
+            
+            savedColi.products.forEach((savedProduct, productIndex) => {
+                debugLog(`🔄 CONVERSION: Traitement produit ${productIndex + 1}:`, savedProduct);
+                
+                if (savedProduct.isLibre) {
+                    // ✅ CORRECTION : Produits libres
+                    debugLog(`🆓 CONVERSION: Création produit libre: ${savedProduct.name}`);
+                    
+                    const libreProduct = this.createLibreProduct(
+                        savedProduct.name || `Produit libre ${productIndex + 1}`,
+                        parseFloat(savedProduct.weight) || 0
+                    );
+                    
+                    // Ajouter le produit libre à la liste globale
+                    currentProducts.push(libreProduct);
+                    
+                    // Ajouter au colis
+                    const productInColis = {
+                        productId: libreProduct.id,
+                        quantity: parseInt(savedProduct.quantity) || 1,
+                        weight: (parseInt(savedProduct.quantity) || 1) * libreProduct.weight
+                    };
+                    
+                    newColis.products.push(productInColis);
+                    debugLog(`✅ CONVERSION: Produit libre ajouté - ID=${libreProduct.id}, qté=${productInColis.quantity}`);
+                    
+                } else {
+                    // ✅ CORRECTION : Produits standards avec plusieurs méthodes de matching
+                    debugLog(`📦 CONVERSION: Recherche produit standard avec ID ${savedProduct.productId}`);
+                    
+                    let product = null;
+                    
+                    // Méthode 1 : Par ID exact
+                    if (savedProduct.productId) {
+                        product = currentProducts.find(p => !p.isLibre && p.id == savedProduct.productId);
                         if (product) {
-                            newColis.products.push({
-                                productId: product.id,
-                                quantity: savedProduct.quantity,
-                                weight: savedProduct.quantity * savedProduct.weight
-                            });
+                            debugLog(`✅ CONVERSION: Produit trouvé par ID exact: ${product.name}`);
                         }
                     }
-                });
-
-                convertedColis.push(newColis);
+                    
+                    // Méthode 2 : Par line_id (si disponible)
+                    if (!product && savedProduct.line_id) {
+                        product = currentProducts.find(p => !p.isLibre && p.line_id == savedProduct.line_id);
+                        if (product) {
+                            debugLog(`✅ CONVERSION: Produit trouvé par line_id: ${product.name}`);
+                        }
+                    }
+                    
+                    // Méthode 3 : Par référence
+                    if (!product && savedProduct.ref) {
+                        product = currentProducts.find(p => !p.isLibre && p.ref === savedProduct.ref);
+                        if (product) {
+                            debugLog(`✅ CONVERSION: Produit trouvé par ref: ${product.name}`);
+                        }
+                    }
+                    
+                    // Méthode 4 : Par nom (en dernier recours)
+                    if (!product && savedProduct.name) {
+                        product = currentProducts.find(p => !p.isLibre && p.name === savedProduct.name);
+                        if (product) {
+                            debugLog(`✅ CONVERSION: Produit trouvé par nom: ${product.name}`);
+                        }
+                    }
+                    
+                    if (product) {
+                        const productInColis = {
+                            productId: product.id,
+                            quantity: parseInt(savedProduct.quantity) || 1,
+                            weight: (parseInt(savedProduct.quantity) || 1) * (parseFloat(savedProduct.weight) || product.weight || 0)
+                        };
+                        
+                        newColis.products.push(productInColis);
+                        debugLog(`✅ CONVERSION: Produit standard ajouté - ID=${product.id}, qté=${productInColis.quantity}, poids=${productInColis.weight}kg`);
+                    } else {
+                        debugLog(`❌ CONVERSION: Produit non trouvé avec les critères:`, {
+                            productId: savedProduct.productId,
+                            line_id: savedProduct.line_id,
+                            ref: savedProduct.ref,
+                            name: savedProduct.name
+                        });
+                        debugLog(`❌ CONVERSION: Produits disponibles:`, currentProducts.filter(p => !p.isLibre).map(p => ({
+                            id: p.id,
+                            line_id: p.line_id,
+                            ref: p.ref,
+                            name: p.name
+                        })));
+                    }
+                }
             });
+        } else {
+            debugLog(`⚠️ CONVERSION: Aucun produit dans le colis sauvegardé ou format incorrect`);
+        }
 
-            return convertedColis;
-        },
+        // ✅ CORRECTION : Recalculer le poids total basé sur les produits réellement ajoutés
+        newColis.totalWeight = newColis.products.reduce((sum, p) => sum + (p.weight || 0), 0);
+        debugLog(`⚖️ CONVERSION: Poids total recalculé: ${newColis.totalWeight}kg`);
 
+        convertedColis.push(newColis);
+        debugLog(`✅ CONVERSION: Colis ${newColis.id} terminé avec ${newColis.products.length} produits`);
+    });
+
+    // ✅ CORRECTION : Mettre à jour la liste des produits avec les nouveaux produits libres
+    FicheProduction.data.setProducts(currentProducts);
+
+    debugLog(`🎉 CONVERSION: Conversion terminée - ${convertedColis.length} colis convertis`);
+    debugLog(`🎉 CONVERSION: Total produits dans les colis:`, convertedColis.reduce((sum, c) => sum + c.products.length, 0));
+    
+    return convertedColis;
+},
+/**
+ * Créer un produit libre (pour le module AJAX)
+ */
+createLibreProduct(name, weight) {
+    const products = FicheProduction.data.products();
+    const newId = Math.max(...products.map(p => p.id), 10000) + 1;
+    
+    const libreProduct = {
+        id: newId,
+        name: name || `Produit libre ${newId}`,
+        weight: parseFloat(weight) || 0,
+        isLibre: true,
+        total: 9999, // Pas de limite pour les produits libres
+        used: 0,
+        ref: `LIBRE_${newId}`,
+        color: 'LIBRE'
+    };
+    
+    debugLog(`🆓 AJAX: Produit libre créé - ID=${libreProduct.id}, nom="${libreProduct.name}", poids=${libreProduct.weight}kg`);
+    
+    return libreProduct;
+},
         /**
          * Créer un produit libre
          */

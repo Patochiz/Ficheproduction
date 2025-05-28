@@ -224,63 +224,125 @@
      * @param {number} productId - ID du produit
      * @param {number} newQuantity - Nouvelle quantité
      */
-    function updateProductQuantity(colisId, productId, newQuantity) {
-        const colis = FicheProduction.data.colis();
-        const products = FicheProduction.data.products();
-        const coliData = colis.find(c => c.id === colisId);
-        const productInColis = coliData ? coliData.products.find(p => p.productId === productId) : null;
-        const product = products.find(p => p.id === productId);
+/**
+ * Mettre à jour la quantité d'un produit dans un colis (VERSION FINALE - Types corrigés)
+ */
+function updateProductQuantity(colisId, productId, newQuantity) {
+    debugLog(`🔧 FINAL DEBUG: updateProductQuantity(${colisId}, ${productId}, ${newQuantity})`);
+    
+    const colis = FicheProduction.data.colis();
+    const products = FicheProduction.data.products();
+    
+    // ✅ SOLUTION FINALE : Utiliser == au lieu de === pour gérer les types mixtes
+    const coliData = colis.find(c => c.id == colisId); // == au lieu de ===
+    const productInColis = coliData ? coliData.products.find(p => p.productId == productId) : null; // == au lieu de ===
+    const product = products.find(p => p.id == productId); // == au lieu de ===
+    
+    debugLog(`📦 FINAL DEBUG: Recherche avec conversion de type:`);
+    debugLog(`   - Colis trouvé: ${!!coliData}`);
+    debugLog(`   - Produit dans colis trouvé: ${!!productInColis}`);
+    debugLog(`   - Produit global trouvé: ${!!product}`);
+    
+    if (!productInColis || !product || !coliData) {
+        debugLog(`❌ FINAL DEBUG: Éléments toujours manquants après conversion de type`);
+        return;
+    }
+
+    const oldQuantity = productInColis.quantity;
+    const quantityDiff = parseInt(newQuantity) - oldQuantity;
+    
+    debugLog(`📊 FINAL DEBUG: Modification détectée - Ancienne qté=${oldQuantity}, Nouvelle qté=${newQuantity}, Diff=${quantityDiff}`);
+
+    // Pour les produits libres, pas de vérification de stock
+    if (product.isLibre) {
+        debugLog(`🆓 FINAL DEBUG: Produit libre - mise à jour directe`);
+        productInColis.quantity = parseInt(newQuantity);
+        productInColis.weight = productInColis.quantity * product.weight;
         
-        if (!productInColis || !product || !coliData) {
-            return;
-        }
-
-        const oldQuantity = productInColis.quantity;
-        const quantityDiff = parseInt(newQuantity) - oldQuantity;
-
-        // Pour les produits libres, pas de vérification de stock
-        if (product.isLibre) {
-            productInColis.quantity = parseInt(newQuantity);
-            productInColis.weight = productInColis.quantity * product.weight;
-            
-            coliData.totalWeight = coliData.products.reduce((sum, p) => sum + p.weight, 0);
-            
-            if (FicheProduction.inventory.renderInventory) {
-                FicheProduction.inventory.renderInventory();
-            }
+        coliData.totalWeight = coliData.products.reduce((sum, p) => sum + (p.weight || 0), 0);
+        debugLog(`⚖️ FINAL DEBUG: Nouveau poids total colis: ${coliData.totalWeight}kg`);
+        
+        // Forcer la mise à jour des données
+        FicheProduction.data.setColis([...colis]);
+        FicheProduction.data.setProducts([...products]);
+        
+        // Re-render forcé
+        setTimeout(() => {
             renderColisOverview();
             renderColisDetail();
             updateSummaryTotals();
-            return;
-        }
-
-        // Vérifier la disponibilité pour les produits normaux
-        const totalQuantityNeeded = quantityDiff * coliData.multiple;
-        const available = product.total - product.used;
+            if (FicheProduction.inventory.renderInventory) {
+                FicheProduction.inventory.renderInventory();
+            }
+        }, 10);
         
-        if (totalQuantityNeeded > available) {
-            alert(`Quantité insuffisante ! Disponible: ${available}, Besoin: ${totalQuantityNeeded}`);
-            const input = document.querySelector(`input[data-product-id="${productId}"]`);
-            if (input) input.value = oldQuantity;
-            return;
-        }
+        debugLog(`✅ FINAL DEBUG: Produit libre mis à jour avec succès`);
+        return;
+    }
 
-        // Mettre à jour les quantités
-        productInColis.quantity = parseInt(newQuantity);
-        productInColis.weight = productInColis.quantity * product.weight;
-        product.used += totalQuantityNeeded;
+    // Vérifier la disponibilité pour les produits normaux
+    const totalQuantityNeeded = quantityDiff * coliData.multiple;
+    const currentAvailable = product.total - product.used;
+    
+    debugLog(`📈 FINAL DEBUG: Quantité nécessaire totale=${totalQuantityNeeded}, Disponible=${currentAvailable}`);
+    
+    if (totalQuantityNeeded > currentAvailable) {
+        alert(`Quantité insuffisante ! Disponible: ${currentAvailable}, Besoin: ${totalQuantityNeeded}`);
+        
+        // Remettre la valeur correcte dans l'input
+        const inputs = document.querySelectorAll(`input[data-product-id="${productId}"]`);
+        inputs.forEach(input => {
+            if (input.value != oldQuantity) {
+                input.value = oldQuantity;
+                debugLog(`🔄 FINAL DEBUG: Input remis à l'ancienne valeur ${oldQuantity}`);
+            }
+        });
+        return;
+    }
 
-        // Recalculer le poids total
-        coliData.totalWeight = coliData.products.reduce((sum, p) => sum + p.weight, 0);
+    // ✅ SOLUTION FINALE : Mettre à jour les quantités
+    debugLog(`🔄 FINAL DEBUG: Mise à jour des quantités...`);
+    productInColis.quantity = parseInt(newQuantity);
+    productInColis.weight = productInColis.quantity * product.weight;
+    product.used += totalQuantityNeeded;
+    
+    debugLog(`📦 FINAL DEBUG: ProductInColis - qté=${productInColis.quantity}, poids=${productInColis.weight}kg`);
+    debugLog(`📊 FINAL DEBUG: Product global - utilisé=${product.used}/${product.total}`);
 
-        // Re-render
+    // Recalculer le poids total du colis
+    const oldTotalWeight = coliData.totalWeight;
+    coliData.totalWeight = coliData.products.reduce((sum, p) => sum + (p.weight || 0), 0);
+    debugLog(`⚖️ FINAL DEBUG: Poids colis: ${oldTotalWeight}kg → ${coliData.totalWeight}kg`);
+
+    // ✅ SOLUTION FINALE : Forcer la mise à jour des données avec nouvelles références
+    FicheProduction.data.setColis([...colis]);
+    FicheProduction.data.setProducts([...products]);
+    
+    debugLog(`💾 FINAL DEBUG: Données sauvegardées avec nouvelles références`);
+
+    // ✅ SOLUTION FINALE : Re-render FORCÉ
+    setTimeout(() => {
+        debugLog(`🔄 FINAL DEBUG: Début du re-render forcé...`);
+        
+        renderColisOverview();
+        debugLog(`✅ FINAL DEBUG: Vue d'ensemble re-rendue`);
+        
+        renderColisDetail();
+        debugLog(`✅ FINAL DEBUG: Détails re-rendus`);
+        
+        updateSummaryTotals();
+        debugLog(`✅ FINAL DEBUG: Totaux mis à jour`);
+        
         if (FicheProduction.inventory.renderInventory) {
             FicheProduction.inventory.renderInventory();
+            debugLog(`✅ FINAL DEBUG: Inventaire re-rendu`);
         }
-        renderColisOverview();
-        renderColisDetail();
-        updateSummaryTotals();
-    }
+        
+        debugLog(`🎉 FINAL DEBUG: Re-render forcé terminé avec succès !`);
+    }, 10);
+    
+    debugLog(`🎉 FINAL DEBUG: updateProductQuantity terminé avec succès !`);
+}
 
     /**
      * Afficher la boîte de dialogue pour dupliquer un colis
@@ -586,6 +648,12 @@
 /**
  * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Délégation d'événements)
  */
+/**
+ * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Attributs data-* corrects)
+ */
+/**
+ * Rendre les détails du colis sélectionné (VERSION SYNCHRONISATION)
+ */
 function renderColisDetail() {
     const container = document.getElementById('colisDetail');
     if (!container) {
@@ -600,24 +668,39 @@ function renderColisDetail() {
         return;
     }
 
-    const weightPercentage = (selectedColis.totalWeight / selectedColis.maxWeight) * 100;
+    // ✅ CORRECTION CRITIQUE : Vérifier la cohérence des données
+    const colis = FicheProduction.data.colis();
+    const currentColiData = colis.find(c => c.id === selectedColis.id);
+    
+    if (!currentColiData) {
+        debugLog(`❌ SYNC ERROR: Colis sélectionné ${selectedColis.id} n'existe plus dans les données`);
+        FicheProduction.data.setSelectedColis(null);
+        container.innerHTML = '<div class="empty-state">Colis non trouvé - veuillez en sélectionner un autre</div>';
+        return;
+    }
+    
+    // ✅ CORRECTION CRITIQUE : Utiliser les données fraîches au lieu du colis en cache
+    const freshSelectedColis = currentColiData;
+    debugLog(`🔄 SYNC: Utilisation des données fraîches - ${freshSelectedColis.products.length} produits dans le colis`);
+
+    const weightPercentage = (freshSelectedColis.totalWeight / freshSelectedColis.maxWeight) * 100;
     let weightStatus = 'ok';
     if (weightPercentage > 90) weightStatus = 'danger';
     else if (weightPercentage > 70) weightStatus = 'warning';
 
-    const multipleSection = selectedColis.multiple > 1 ? 
+    const multipleSection = freshSelectedColis.multiple > 1 ? 
         `<div class="duplicate-controls">
             <span>📦 Ce colis sera créé</span>
-            <input type="number" value="${selectedColis.multiple}" min="1" max="100" 
+            <input type="number" value="${freshSelectedColis.multiple}" min="1" max="100" 
                    class="duplicate-input" id="multipleInput">
             <span>fois identique(s)</span>
             <span style="margin-left: 10px; font-weight: bold;">
-                Total: ${(selectedColis.totalWeight * selectedColis.multiple).toFixed(1)} kg
+                Total: ${(freshSelectedColis.totalWeight * freshSelectedColis.multiple).toFixed(1)} kg
             </span>
         </div>` : '';
 
-    const colisTypeText = selectedColis.isLibre ? 'Colis Libre' : `Colis ${selectedColis.number}`;
-    const colisTypeIcon = selectedColis.isLibre ? '📦🆓' : '📦';
+    const colisTypeText = freshSelectedColis.isLibre ? 'Colis Libre' : `Colis ${freshSelectedColis.number}`;
+    const colisTypeIcon = freshSelectedColis.isLibre ? '📦🆓' : '📦';
 
     container.innerHTML = `
         <div class="colis-detail-header">
@@ -631,7 +714,7 @@ function renderColisDetail() {
             <div class="constraint-item">
                 <div class="constraint-label">Poids:</div>
                 <div class="constraint-values">
-                    ${selectedColis.totalWeight.toFixed(1)} / ${selectedColis.maxWeight} kg
+                    ${freshSelectedColis.totalWeight.toFixed(1)} / ${freshSelectedColis.maxWeight} kg
                 </div>
                 <div class="constraint-bar">
                     <div class="constraint-progress ${weightStatus}" style="width: ${Math.min(weightPercentage, 100)}%"></div>
@@ -642,28 +725,38 @@ function renderColisDetail() {
         <div style="margin-bottom: 10px; font-weight: bold;">Produits dans ce colis:</div>
         <div class="colis-content" id="colisContent" style="border: 2px dashed #ddd; border-radius: 8px; min-height: 150px; padding: 15px; position: relative;">
             <div class="drop-hint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #999; font-style: italic; pointer-events: none;">
-                ${selectedColis.products.length === 0 ? (selectedColis.isLibre ? 'Colis libre vide' : 'Glissez un produit ici pour l\'ajouter') : ''}
+                ${freshSelectedColis.products.length === 0 ? (freshSelectedColis.isLibre ? 'Colis libre vide' : 'Glissez un produit ici pour l\'ajouter') : ''}
             </div>
         </div>
     `;
 
-    // ✅ SOLUTION : Ajouter les vignettes SANS event listeners individuels
+    // ✅ CORRECTION CRITIQUE : Utiliser les données fraîches pour les vignettes
     const colisContent = document.getElementById('colisContent');
     const products = FicheProduction.data.products();
     
-    if (selectedColis.products.length > 0) {
-        selectedColis.products.forEach((p, index) => {
-            const product = products.find(prod => prod.id === p.productId);
-            if (!product) return;
+    debugLog(`🔍 SYNC DEBUG: Rendu détails colis ${freshSelectedColis.id} avec ${freshSelectedColis.products.length} produits`);
+    debugLog(`🔍 SYNC DEBUG: Produits dans le colis:`, freshSelectedColis.products);
+    debugLog(`🔍 SYNC DEBUG: Produits globaux disponibles:`, products.length);
+    
+    if (freshSelectedColis.products.length > 0) {
+        freshSelectedColis.products.forEach((productInColis, index) => {
+            const product = products.find(prod => prod.id === productInColis.productId);
+            if (!product) {
+                debugLog(`❌ SYNC DEBUG: Produit ${productInColis.productId} non trouvé dans la liste globale`);
+                debugLog(`❌ SYNC DEBUG: IDs disponibles:`, products.map(p => p.id));
+                return;
+            }
 
-            const vignette = FicheProduction.inventory.createProductVignette(product, true, p.quantity);
+            debugLog(`✅ SYNC DEBUG: Création vignette pour produit ${product.id} (${product.name}) - qté: ${productInColis.quantity}`);
+
+            const vignette = FicheProduction.inventory.createProductVignette(product, true, productInColis.quantity);
             
-            // ✅ SOLUTION : Bouton supprimer SANS event listener individuel
+            // Bouton supprimer
             const removeBtn = document.createElement('button');
             removeBtn.className = 'btn-remove-line';
             removeBtn.textContent = '×';
-            removeBtn.dataset.productId = p.productId;
-            removeBtn.dataset.colisId = selectedColis.id;
+            removeBtn.dataset.productId = product.id;
+            removeBtn.dataset.colisId = freshSelectedColis.id;
             removeBtn.style.cssText = `
                 position: absolute; top: 5px; left: 5px; background: #dc3545; color: white;
                 border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;
@@ -673,61 +766,115 @@ function renderColisDetail() {
             vignette.style.position = 'relative';
             vignette.appendChild(removeBtn);
 
-            // ✅ SOLUTION : Input de quantité SANS event listener individuel
+            // ✅ CORRECTION CRITIQUE : S'assurer que l'input a les bons attributs ET la bonne valeur
             const quantityInput = vignette.querySelector('.quantity-input');
             if (quantityInput) {
-                quantityInput.dataset.colisId = selectedColis.id; // Ajouter l'ID du colis
+                quantityInput.dataset.productId = product.id;
+                quantityInput.dataset.colisId = freshSelectedColis.id;
+                quantityInput.value = productInColis.quantity; // ✅ Valeur synchronisée
+                
+                debugLog(`✅ SYNC DEBUG: Input configuré - productId=${product.id}, colisId=${freshSelectedColis.id}, value=${productInColis.quantity}`);
             }
 
             colisContent.appendChild(vignette);
         });
     }
 
-    // Event listeners pour les contrôles généraux du colis (ces éléments ne changent pas)
+    // ✅ CORRECTION CRITIQUE : Mettre à jour la référence du colis sélectionné
+    FicheProduction.data.setSelectedColis(freshSelectedColis);
+
+    // Event listeners pour les contrôles généraux
     const deleteBtn = document.getElementById('deleteColisBtn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            await deleteColis(selectedColis.id);
+            await deleteColis(freshSelectedColis.id);
         });
     }
 
     const multipleInput = document.getElementById('multipleInput');
     if (multipleInput) {
         multipleInput.addEventListener('change', async (e) => {
-            await updateColisMultiple(selectedColis.id, e.target.value);
+            await updateColisMultiple(freshSelectedColis.id, e.target.value);
         });
     }
 
-    // Setup drop zone pour le contenu du colis (seulement pour colis normaux)
-    if (colisContent && !selectedColis.isLibre && FicheProduction.dragdrop.setupDropZone) {
-        FicheProduction.dragdrop.setupDropZone(colisContent, selectedColis.id);
+    // Setup drop zone
+    if (colisContent && !freshSelectedColis.isLibre && FicheProduction.dragdrop.setupDropZone) {
+        FicheProduction.dragdrop.setupDropZone(colisContent, freshSelectedColis.id);
     }
     
-    debugLog(`✅ Détails du colis ${selectedColis.id} rendus avec ${selectedColis.products.length} produits - Délégation d'événements active`);
+    debugLog(`✅ SYNC: Détails du colis ${freshSelectedColis.id} rendus avec synchronisation des données`);
 }
 
 // ✅ SOLUTION : Initialiser la délégation d'événements UNE SEULE FOIS
+/**
+ * Initialiser la délégation d'événements UNE SEULE FOIS (VERSION CORRIGÉE)
+ */
 function initializeColisDetailEventDelegation() {
+    // ✅ PROTECTION : Vérifier si déjà initialisé
+    if (window.ficheProductionEventDelegationInitialized) {
+        debugLog('⚠️ Délégation d\'événements déjà initialisée');
+        return;
+    }
+    
     const container = document.getElementById('colisDetail');
-    if (!container) return;
+    if (!container) {
+        debugLog('❌ Container colisDetail non trouvé pour la délégation');
+        return;
+    }
     
-    // Supprimer les anciens listeners pour éviter les doublons
-    container.removeEventListener('click', handleColisDetailClick);
-    container.removeEventListener('change', handleColisDetailChange);
-    container.removeEventListener('keydown', handleColisDetailKeydown);
+    // ✅ DÉLÉGATION : Gestionnaire unique pour tous les événements
+    container.addEventListener('click', function(e) {
+        // Bouton supprimer produit
+        if (e.target.classList.contains('btn-remove-line')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const productId = parseInt(e.target.dataset.productId);
+            const colisId = parseInt(e.target.dataset.colisId);
+            
+            debugLog(`🗑️ DELEGATION: Suppression produit ${productId} du colis ${colisId}`);
+            removeProductFromColis(colisId, productId);
+        }
+    });
     
-    // ✅ DÉLÉGATION : Gérer tous les clics sur les boutons de suppression
-    container.addEventListener('click', handleColisDetailClick);
+    container.addEventListener('change', function(e) {
+    // Input de quantité
+    if (e.target.classList.contains('quantity-input')) {
+        const productId = parseInt(e.target.dataset.productId);
+        const colisId = parseInt(e.target.dataset.colisId);
+        const newQuantity = parseInt(e.target.value);
+        
+        debugLog(`📝 DELEGATION DEBUG: Changement détecté`);
+        debugLog(`📝 DELEGATION DEBUG: productId=${productId} (type: ${typeof productId})`);
+        debugLog(`📝 DELEGATION DEBUG: colisId=${colisId} (type: ${typeof colisId})`);
+        debugLog(`📝 DELEGATION DEBUG: newQuantity=${newQuantity} (type: ${typeof newQuantity})`);
+        debugLog(`📝 DELEGATION DEBUG: Attributs element:`, e.target.dataset);
+        
+        if (isNaN(productId) || isNaN(colisId) || isNaN(newQuantity)) {
+            debugLog(`❌ DELEGATION DEBUG: Valeurs invalides détectées`);
+            return;
+        }
+        
+        debugLog(`📝 DELEGATION: Modification quantité produit ${productId} vers ${newQuantity} dans colis ${colisId}`);
+        updateProductQuantity(colisId, productId, newQuantity);
+    }
+    });
     
-    // ✅ DÉLÉGATION : Gérer tous les changements d'inputs de quantité
-    container.addEventListener('change', handleColisDetailChange);
+    container.addEventListener('keydown', function(e) {
+        // Touche Entrée sur input de quantité
+        if (e.key === 'Enter' && e.target.classList.contains('quantity-input')) {
+            e.target.blur(); // Déclenche l'événement change
+            debugLog('⌨️ DELEGATION: Touche Entrée sur input quantité');
+        }
+    });
     
-    // ✅ DÉLÉGATION : Gérer la touche Entrée sur les inputs
-    container.addEventListener('keydown', handleColisDetailKeydown);
+    // Marquer comme initialisé
+    window.ficheProductionEventDelegationInitialized = true;
     
-    debugLog('✅ Délégation d\'événements initialisée pour colisDetail');
+    debugLog('✅ Délégation d\'événements initialisée (protection doublons active)');
 }
 
 // ✅ SOLUTION : Gestionnaire de clics délégué
@@ -769,20 +916,44 @@ function handleColisDetailKeydown(e) {
     /**
      * Initialiser le module colis
      */
-    function initializeColisModule() {
-        debugLog('📦 Initialisation du module Colis');
-        
-        // Bouton Nouveau Colis
-        const addNewColisBtn = document.getElementById('addNewColisBtn');
-        if (addNewColisBtn) {
-            addNewColisBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                addNewColis();
-            });
-        }
-        
-        debugLog('✅ Module Colis initialisé');
+    /**
+ * Initialiser le module colis (VERSION CORRIGÉE - Protection contre les doublons)
+ */
+function initializeColisModule() {
+    debugLog('📦 Initialisation du module Colis');
+    
+    // ✅ PROTECTION : Vérifier si déjà initialisé
+    if (window.ficheProductionColisInitialized) {
+        debugLog('⚠️ Module Colis déjà initialisé - éviter les doublons');
+        return;
     }
+    
+    // ✅ PROTECTION : Bouton Nouveau Colis - supprimer l'ancien listener d'abord
+    const addNewColisBtn = document.getElementById('addNewColisBtn');
+    if (addNewColisBtn) {
+        // Cloner l'élément pour supprimer tous les listeners existants
+        const newBtn = addNewColisBtn.cloneNode(true);
+        addNewColisBtn.parentNode.replaceChild(newBtn, addNewColisBtn);
+        
+        // Attacher le nouveau listener
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            debugLog('🔘 Clic sur Nouveau Colis - handler unique');
+            addNewColis();
+        });
+        
+        debugLog('✅ Event listener Nouveau Colis attaché (unique)');
+    }
+    
+    // ✅ PROTECTION : Initialiser la délégation d'événements UNE SEULE FOIS
+    initializeColisDetailEventDelegation();
+    
+    // Marquer comme initialisé
+    window.ficheProductionColisInitialized = true;
+    
+    debugLog('✅ Module Colis initialisé (protection doublons active)');
+}
 
     // ============================================================================
     // REGISTRATION DU MODULE (VERSION AMÉLIORÉE)
