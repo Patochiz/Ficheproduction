@@ -123,7 +123,8 @@ if (!empty($action) && strpos($action, 'ficheproduction_') === 0) {
                                 // Only add products with quantity > 0
                                 if ($quantity > 0) {
                                     $productData = array(
-                                        'id' => $line->fk_product,
+                                        'id' => $line->id,                    // ✅ ID de ligne UNIQUE
+                                        'product_id' => $line->fk_product,    // ID produit pour référence
                                         'ref' => $product->ref,
                                         'name' => $product->label,
                                         'color' => $color,
@@ -149,7 +150,7 @@ if (!empty($action) && strpos($action, 'ficheproduction_') === 0) {
                                             'products' => array()
                                         );
                                     }
-                                    $productGroups[$groupKey]['products'][] = $productData['id'];
+                                    $productGroups[$groupKey]['products'][] = $line->id;
                                 }
                             }
                         }
