@@ -580,6 +580,9 @@
     /**
  * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Event Listeners Fonctionnels)
  */
+/**
+ * Rendre les détails du colis sélectionné (VERSION CORRIGÉE - Event Listeners Fonctionnels)
+ */
 function renderColisDetail() {
     const container = document.getElementById('colisDetail');
     if (!container) {
