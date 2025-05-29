@@ -90,6 +90,18 @@ Print = Imprimer
 Export = Exporter
 
 #
+# PDF Actions
+#
+GeneratePDF = Générer PDF
+ViewPDF = Voir PDF
+DownloadPDF = Télécharger PDF
+DeletePDF = Supprimer PDF
+PDFGenerated = PDF généré avec succès
+PDFDeleted = PDF supprimé avec succès
+PDFError = Erreur lors de la génération du PDF
+PDFNotFound = Fichier PDF non trouvé
+
+#
 # Messages
 #
 SessionSaved = Session sauvegardée avec succès
