@@ -35,6 +35,8 @@ require_once dol_buildpath('/ficheproduction/class/ficheproductionmanager.class.
 require_once dol_buildpath('/ficheproduction/class/ficheproductionsession.class.php');
 require_once dol_buildpath('/ficheproduction/class/ficheproductioncolis.class.php');
 require_once dol_buildpath('/ficheproduction/class/ficheproductioncolisline.class.php');
+require_once dol_buildpath('/ficheproduction/includes/ficheproduction_buttons.php');
+generatePDFButtons($object, $user, $langs, $conf);
 
 // Load translations
 $langs->loadLangs(array('orders', 'products', 'companies'));
