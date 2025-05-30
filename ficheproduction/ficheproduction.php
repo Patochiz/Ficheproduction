@@ -36,7 +36,6 @@ require_once dol_buildpath('/ficheproduction/class/ficheproductionsession.class.
 require_once dol_buildpath('/ficheproduction/class/ficheproductioncolis.class.php');
 require_once dol_buildpath('/ficheproduction/class/ficheproductioncolisline.class.php');
 require_once dol_buildpath('/ficheproduction/includes/ficheproduction_buttons.php');
-generatePDFButtons($object, $user, $langs, $conf);
 
 // Load translations
 $langs->loadLangs(array('orders', 'products', 'companies'));
@@ -672,12 +671,7 @@ print '</div>';
 // FIN NOUVELLE SECTION
 
 // Boutons d'action
-print '<div class="tabsAction">';
-if ($userCanEdit) {
-    print '<a class="butAction" href="javascript:saveColisage();" id="saveColisageBtn">💾 ' . $langs->trans("Save") . '</a>';
-}
-print '<a class="butAction" href="javascript:preparePrint();">' . $langs->trans("PrintButton") . '</a>';
-print '</div>';
+generatePDFButtons($object, $user, $langs, $conf);
 ?>
 
 <!-- Console de debug -->
