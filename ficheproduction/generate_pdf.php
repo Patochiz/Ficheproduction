@@ -10,7 +10,7 @@
 /**
  * \file       generate_pdf.php
  * \ingroup    ficheproduction
- * \brief      Generate production sheet PDF
+ * \brief      Generate production sheet PDF - Version corrigée
  */
 
 // Load Dolibarr environment
@@ -65,52 +65,71 @@ if ($id > 0 || !empty($ref)) {
  */
 
 if ($action == 'builddoc') {
-    // Generate PDF
-    $hidedetails = GETPOST('hidedetails', 'int') ? GETPOST('hidedetails', 'int') : 0;
-    $hidedesc = GETPOST('hidedesc', 'int') ? GETPOST('hidedesc', 'int') : 0;
-    $hideref = GETPOST('hideref', 'int') ? GETPOST('hideref', 'int') : 0;
+    // DEBUG: Log de démarrage
+    dol_syslog("FicheProduction PDF: Début génération pour commande ".$object->id, LOG_INFO);
     
-    $outputlangs = $langs;
-    $newlang = '';
-    
-    if ($conf->global->MAIN_MULTILANGS && empty($newlang) && GETPOST('lang_id', 'aZ09')) {
-        $newlang = GETPOST('lang_id', 'aZ09');
-    }
-    if ($conf->global->MAIN_MULTILANGS && empty($newlang)) {
-        $newlang = $object->thirdparty->default_lang;
-    }
-    if (!empty($newlang)) {
-        $outputlangs = new Translate("", $conf);
-        $outputlangs->setDefaultLang($newlang);
-    }
-    
-    // Create PDF generator
-    $pdfGenerator = new FicheProductionPDF($db);
-    
-    $result = $pdfGenerator->write_file($object, $outputlangs, '', $hidedetails, $hidedesc, $hideref);
-    
-    if ($result <= 0) {
-        dol_print_error($db, $pdfGenerator->error);
-        exit;
-    } else {
-        // Redirect to the generated PDF
-        $filename = $object->ref."-fiche-production.pdf";
-        $filepath = $conf->commande->multidir_output[$object->entity]."/".$object->ref."/".$filename;
+    try {
+        // Generate PDF
+        $hidedetails = GETPOST('hidedetails', 'int') ? GETPOST('hidedetails', 'int') : 0;
+        $hidedesc = GETPOST('hidedesc', 'int') ? GETPOST('hidedesc', 'int') : 0;
+        $hideref = GETPOST('hideref', 'int') ? GETPOST('hideref', 'int') : 0;
         
-        if (file_exists($filepath)) {
-            // Set headers for PDF display
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: inline; filename="'.$filename.'"');
-            header('Content-Length: '.filesize($filepath));
-            header('Cache-Control: private, max-age=0, must-revalidate');
-            header('Pragma: public');
-            
-            // Output the PDF
-            readfile($filepath);
+        $outputlangs = $langs;
+        $newlang = '';
+        
+        if ($conf->global->MAIN_MULTILANGS && empty($newlang) && GETPOST('lang_id', 'aZ09')) {
+            $newlang = GETPOST('lang_id', 'aZ09');
+        }
+        if ($conf->global->MAIN_MULTILANGS && empty($newlang)) {
+            $newlang = $object->thirdparty->default_lang;
+        }
+        if (!empty($newlang)) {
+            $outputlangs = new Translate("", $conf);
+            $outputlangs->setDefaultLang($newlang);
+        }
+        
+        // DEBUG: Vérification de la classe
+        dol_syslog("FicheProduction PDF: Création de l'instance PDF", LOG_INFO);
+        
+        // Create PDF generator
+        $pdfGenerator = new FicheProductionPDF($db);
+        
+        dol_syslog("FicheProduction PDF: Appel write_file", LOG_INFO);
+        
+        $result = $pdfGenerator->write_file($object, $outputlangs, '', $hidedetails, $hidedesc, $hideref);
+        
+        if ($result <= 0) {
+            dol_syslog("FicheProduction PDF: Erreur génération - ".$pdfGenerator->error, LOG_ERR);
+            dol_print_error($db, $pdfGenerator->error);
             exit;
         } else {
-            setEventMessages("Erreur lors de la génération du PDF", null, 'errors');
+            dol_syslog("FicheProduction PDF: Génération réussie", LOG_INFO);
+            
+            // Redirect to the generated PDF
+            $filename = $object->ref."-fiche-production.pdf";
+            $filepath = $conf->commande->multidir_output[$object->entity]."/".$object->ref."/".$filename;
+            
+            if (file_exists($filepath)) {
+                // Set headers for PDF display
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: inline; filename="'.$filename.'"');
+                header('Content-Length: '.filesize($filepath));
+                header('Cache-Control: private, max-age=0, must-revalidate');
+                header('Pragma: public');
+                
+                // Output the PDF
+                readfile($filepath);
+                exit;
+            } else {
+                dol_syslog("FicheProduction PDF: Fichier non trouvé - ".$filepath, LOG_ERR);
+                setEventMessages("Erreur : Fichier PDF non trouvé après génération", null, 'errors');
+            }
         }
+        
+    } catch (Exception $e) {
+        dol_syslog("FicheProduction PDF: Exception - ".$e->getMessage(), LOG_ERR);
+        dol_print_error($db, "Erreur PHP: ".$e->getMessage());
+        exit;
     }
 }
 
